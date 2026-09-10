@@ -1,5 +1,0 @@
----
-upgrade:
-  - |
-    Ceph release has been switched to Umbrella as Tentacle repos are gone
-    for Ubuntu Noble and Debian Trixie.

@@ -1,0 +1,56 @@
+---
+- name: Configure Telemetry Pipelines across Cloud Infrastructure
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Download Grafana GPG Keys (Debian Trixie Compatible)
+      get_url:
+        url: https://hashicorp.com
+        dest: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        mode: '0644'
+
+    - name: Inject Telemetry Repository Pointers
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://hashicorp.com trixie main"
+        state: present
+        filename: hashicorp
+
+    - name: Deploy Grafana Alloy Infrastructure Daemon
+      apt:
+        name: alloy
+        state: present
+        update_cache: true
+
+    - name: Push Node Telemetry Ingestion Manifest
+      copy:
+        dest: /etc/alloy/config.alloy
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          logging {
+            level  = "info"
+            format = "logfmt"
+          }
+          prometheus.exporter.unix "os_host_metrics" {
+            procfs_path = "/proc"
+            sysfs_path  = "/sys"
+          }
+          prometheus.scrape "scrape_metrics" {
+            targets    = prometheus.exporter.unix.os_host_metrics.targets
+            forward_to = [otelcol.receiver.otlp.default.receiver]
+          }
+          otelcol.receiver.otlp "default" {
+            grpc {
+              endpoint = "{{ otel_collector_endpoint }}"
+            }
+          }
+      notify: Restart Telemetry Service
+
+  handlers:
+    - name: Restart Telemetry Service
+      systemd:
+        name: alloy
+        state: restarted
+        enabled: true
+

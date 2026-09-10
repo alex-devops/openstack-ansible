@@ -1,0 +1,60 @@
+---
+- name: Offline Deployment Pipeline for OpenTelemetry Collectors
+  hosts: otel_collectors
+  remote_user: dev
+  become: true
+  become_method: sudo
+  # Run across all target collectors simultaneously
+  # forks: 10
+  
+  vars:
+    local_asset_path: "~/work/openstack-ansible/otelcol-contrib_0.160.0_linux_amd64.deb"
+    remote_staging_path: "/tmp/otelcol-contrib_0.160.0_linux_amd64.deb"
+
+  tasks:
+    - name: Detect and Purge Conflicting Third-Party systemctl Packages
+      apt:
+        name: systemctl
+        state: absent
+        purge: true
+      register: purge_result
+
+    - name: Force Clean Latent Interrupted APT States
+      command: apt-get install -f -y
+      when: purge_result.changed
+      changed_when: false
+
+    - name: Push Collector Binary Asset from Controller to Target Fleet
+      copy:
+        src: "{{ local_asset_path }}"
+        dest: "{{ remote_staging_path }}"
+        owner: dev
+        group: dev
+        mode: '0644'
+
+    - name: Execute Manual dpkg Routine from Local Staging Cache
+      apt:
+        deb: "{{ remote_staging_path }}"
+        state: present
+
+    - name: Clean Up Temporary Remote Installation File
+      file:
+        path: "{{ remote_staging_path }}"
+        state: absent
+
+    - name: Force Systemd to Reload Local Unit Registrations
+      systemd:
+        daemon_reload: true
+
+    - name: Enable and Launch Clustered otelcol-contrib Daemon
+      systemd:
+        name: otelcol-contrib
+        state: started
+        enabled: true
+
+    - name: Verify Service Ingestion Socket is Active
+      wait_for:
+        port: 4317
+        timeout: 10
+        state: started
+

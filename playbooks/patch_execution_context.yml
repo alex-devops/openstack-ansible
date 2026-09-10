@@ -1,0 +1,15 @@
+---
+- name: Validate Deployment User and Escalation Mechanics
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Assert Current Identity is root via Sudo Elevation
+      command: whoami
+      register: current_user
+      changed_when: false
+      failed_when: current_user.stdout != 'root'
+
+    - name: Display Active Execution Confirmation Map
+      debug:
+        msg: "Connection established successfully to {{ inventory_hostname }} via remote user 'dev' with root privileges."
+

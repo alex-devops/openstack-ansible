@@ -1,0 +1,42 @@
+# Shift focus back to the repository base directory
+cd openstack-ansible
+
+# Fetch all tracking branches from GitHub/OpenDev
+git fetch --all
+
+# Check out the clean, production stable/2026.1 release path
+git checkout stable/2026.1
+
+# Sync internal collections, extensions, and submodules matching the 2026.1 release tree
+git submodule update --init --recursive
+
+
+# 1. Force the bootstrap engine to install the specific core collections
+sudo ./scripts/bootstrap-ansible.sh
+
+# 2. Source the newly updated profile paths to pull binary shortcuts into your session
+source /etc/profile
+
+# 3. Confirm the deployment tool wrapper is accessible
+which openstack-ansible
+
+# Step 1: Run the pre-flight verification script to confirm dev sudo permissions
+openstack-ansible -i ../inventory/inventory.ini patch_execution_context.yml
+
+# Step 2: Trigger standard OpenStack-Ansible base infra setup routines 
+openstack-ansible -i ../inventory/inventory.ini setup-hosts.yml
+
+#openstack-ansible -i ../inventory/inventory.ini setup-infrastructure.yml
+openstack-ansible -i ../inventory/inventory.ini setup-infrastructure.yml --extra-vars "install_method=source"
+
+
+# Step 3: Inject your OpenTelemetry and Observability roles across the active fleet
+openstack-ansible -i ../inventory/inventory.ini patch_observability.yml
+
+# Step 4: Run your OpenStack software services deployment suite
+openstack-ansible -i ../inventory/inventory.ini setup-openstack.yml
+
+source /root/openrc
+openstack service list
+
+

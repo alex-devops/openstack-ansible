@@ -1,0 +1,7 @@
+# Create file at ../inventory/group_vars/all/telemetry_overrides.yml
+---
+install_method: "source"
+service_install_method: "source"
+properties:
+  is_metal: true
+

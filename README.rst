@@ -5,6 +5,7 @@ OpenStack-Ansible
 .. image:: https://governance.openstack.org/tc/badges/openstack-ansible.svg
 
 .. Change things from this point on
+- needed: otelcol-contrib_0.160.0_linux_amd64.deb
 
 OpenStack-Ansible is an `official OpenStack project`_ which aims to deploy
 production environments from source in a way that makes it scalable while
